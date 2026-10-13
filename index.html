@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>오늘의 응원 한마디</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      font-size: 20px;
+      line-height: 1.6;
+      color: #2b2b2b;
+      background: linear-gradient(160deg, #fff4e6 0%, #ffe3ec 100%);
+    }
+
+    main {
+      width: 100%;
+      max-width: 520px;
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 32px 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin: 0 0 24px;
+      font-size: 32px;
+      text-align: center;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .hint {
+      margin: 6px 0 20px;
+      font-size: 16px;
+      color: #777;
+    }
+
+    input {
+      width: 100%;
+      padding: 16px;
+      font-size: 22px;
+      border: 2px solid #ddd;
+      border-radius: 14px;
+      outline: none;
+    }
+
+    input:focus { border-color: #ff7a59; }
+
+    button {
+      width: 100%;
+      min-height: 64px;
+      padding: 16px;
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+      background: #ff7a59;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+    }
+
+    button:hover { background: #f2633f; }
+    button:disabled { background: #c9c9c9; cursor: wait; }
+
+    #result {
+      margin-top: 28px;
+      min-height: 120px;
+      padding: 24px 20px;
+      border-radius: 16px;
+      background: #fff8f0;
+      font-size: 24px;
+      font-weight: 600;
+      text-align: center;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+    }
+
+    #result.loading { color: #888; }
+    #result.error { background: #ffecec; color: #c0392b; font-size: 20px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>오늘의 응원 한마디</h1>
+
+    <form id="cheer-form">
+      <label for="nickname">공개용 닉네임</label>
+      <input id="nickname" type="text" maxlength="20" autocomplete="off" placeholder="예: 햇살" />
+      <p class="hint">비워 두면 "여러분"으로 불러 드려요. 실명 대신 닉네임을 써 주세요.</p>
+      <button id="cheer-button" type="submit">응원 받기</button>
+    </form>
+
+    <div id="result" role="status" aria-live="polite">버튼을 누르면 응원 한마디가 나타나요.</div>
+  </main>
+
+  <script>
+    const form = document.getElementById("cheer-form");
+    const input = document.getElementById("nickname");
+    const button = document.getElementById("cheer-button");
+    const result = document.getElementById("result");
+
+    function show(text, state) {
+      result.textContent = text;
+      result.className = state || "";
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const name = input.value.trim();
+      button.disabled = true;
+      show("응원 문장을 가져오는 중이에요…", "loading");
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+
+      try {
+        const url = "api/message?name=" + encodeURIComponent(name);
+        const response = await fetch(url, { signal: controller.signal, cache: "no-store" });
+        if (!response.ok) throw new Error("HTTP " + response.status);
+
+        const data = await response.json();
+        if (!data || typeof data.message !== "string") throw new Error("잘못된 응답");
+
+        show(data.message);
+      } catch (error) {
+        show("응원 문장을 불러오지 못했어요. 서버에 연결할 수 없거나 응답이 올바르지 않아요. 잠시 후 다시 시도해 주세요.", "error");
+      } finally {
+        clearTimeout(timer);
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
